@@ -45,6 +45,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
 
+-- Declare Window at outer scope so it's accessible everywhere
+local Window
+
 do -- // Loader + UI + Dashboard
     -- Safety wrapper for WindUI loading (prevents crash on some executors)
 -- === Katchi Lite UI (WindUI-compatible shim) ===
@@ -916,24 +919,13 @@ do
             Size = UDim2.new(0, windowWidth, 0, windowHeight),
             Position = UDim2.new(0.5, 0, 0.5, 0),
             AnchorPoint = Vector2.new(0.5, 0.5),
-            BackgroundColor3 = Color3.fromRGB(20, 20, 25),
-            BackgroundTransparency = 0.15,
+            BackgroundColor3 = Color3.fromRGB(18, 18, 22),
+            BackgroundTransparency = 0.25,
             BorderSizePixel = 0
         })
         round(frame, 12)
-        stroke(frame, Color3.fromRGB(100, 100, 110), 1, 0.5)
+        stroke(frame, Color3.fromRGB(255, 70, 70), 1.5, 0.2) -- Red outline
         frame.Parent = gui
-
-        -- Blur effect behind the UI
-        local blur = Instance.new("BlurEffect")
-        blur.Name = "KatchiBlur"
-        blur.Size = 10
-        blur.Parent = game:GetService("Lighting")
-        
-        -- Store blur reference for cleanup
-        frame:GetPropertyChangedSignal("Visible"):Connect(function()
-            blur.Enabled = frame.Visible
-        end)
 
         -- Make window draggable
         local dragging, dragStart, startPos
@@ -981,19 +973,19 @@ do
             Position = UDim2.new(1, -30, 0, 4),
             BackgroundTransparency = 1,
             Font = Enum.Font.GothamBold,
-            TextSize = 18,
-            TextColor3 = Color3.fromRGB(200, 200, 200),
-            Text = "−",
+            TextSize = 20,
+            TextColor3 = Color3.fromRGB(255, 255, 255),
+            Text = "-",
             AutoButtonColor = false
         })
         minimizeBtn.Parent = frame
         
         -- Hover effect for minimize button
         minimizeBtn.MouseEnter:Connect(function()
-            minimizeBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+            minimizeBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
         end)
         minimizeBtn.MouseLeave:Connect(function()
-            minimizeBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+            minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         end)
         minimizeBtn.MouseButton1Click:Connect(function()
             frame.Visible = false
@@ -1004,8 +996,8 @@ do
         local tabListScroll = new("ScrollingFrame", {
             Size = UDim2.new(0, tabWidth, 1, -40),
             Position = UDim2.new(0, 6, 0, 34),
-            BackgroundColor3 = Color3.fromRGB(15, 15, 18),
-            BackgroundTransparency = 0.3,
+            BackgroundColor3 = Color3.fromRGB(12, 12, 15),
+            BackgroundTransparency = 0.4,
             BorderSizePixel = 0,
             ScrollBarThickness = 2,
             ScrollingDirection = Enum.ScrollingDirection.Y,
@@ -1035,8 +1027,8 @@ do
         local content = new("Frame", {
             Size = UDim2.new(1, -tabWidth - 14, 1, -40),
             Position = UDim2.new(0, tabWidth + 10, 0, 34),
-            BackgroundColor3 = Color3.fromRGB(15, 15, 18),
-            BackgroundTransparency = 0.3,
+            BackgroundColor3 = Color3.fromRGB(12, 12, 15),
+            BackgroundTransparency = 0.4,
             BorderSizePixel = 0,
             ClipsDescendants = true
         })
@@ -1275,7 +1267,7 @@ end
 
 local KATCHI_LOGO_URL = "https://raw.githubusercontent.com/KatchiHub/Katchi-Huh/refs/heads/main/1767175079960.png"
 
-local Window = WindUI:CreateWindow({
+Window = WindUI:CreateWindow({
     Title = "Katchi Hub",
     Author = "by Yuki",
     Folder = "KatchiHub/GutsBlackPowder",
