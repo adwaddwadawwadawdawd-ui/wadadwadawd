@@ -410,17 +410,16 @@ do
         stroke(dropdownHolder, Color3.fromRGB(255,255,255), 1, 0.8)
         dropdownHolder.Parent = frame
 
-        local list = new("UIListLayout", {
-            FillDirection = Enum.FillDirection.Vertical,
-            Padding = UDim.new(0, 2),
-            HorizontalAlignment = Enum.HorizontalAlignment.Center,
-            VerticalAlignment = Enum.VerticalAlignment.Top
-        })
-        list.Parent = dropdownHolder
-
         local function rebuild()
             dropdownHolder:ClearAllChildren()
-            list.Parent = dropdownHolder
+            -- Create new UIListLayout each time (old one is destroyed with ClearAllChildren)
+            local newList = new("UIListLayout", {
+                FillDirection = Enum.FillDirection.Vertical,
+                Padding = UDim.new(0, 2),
+                HorizontalAlignment = Enum.HorizontalAlignment.Center,
+                VerticalAlignment = Enum.VerticalAlignment.Top
+            })
+            newList.Parent = dropdownHolder
             for _, v in ipairs(values or {}) do
                 local item = new("TextButton", {
                     AutoButtonColor = false,
@@ -846,7 +845,8 @@ do
         local btn = new("TextButton", {
             Size = UDim2.new(0, 100, 0, 32),
             Position = UDim2.new(0, 10, 0, 80),
-            BackgroundColor3 = Color3.fromRGB(255, 85, 85),
+            BackgroundColor3 = Color3.fromRGB(18, 18, 22),
+            BackgroundTransparency = 0.25,
             Text = opts and (opts.Text or "Open") or "Open",
             TextColor3 = Color3.fromRGB(255, 255, 255),
             Font = Enum.Font.GothamBold,
@@ -855,17 +855,52 @@ do
             Visible = false -- Start hidden since UI starts visible
         })
         round(btn, 8)
+        stroke(btn, Color3.fromRGB(255, 70, 70), 1.5, 0.2) -- Red outline like main UI
         btn.Parent = self._gui
         
-        -- Toggle frame visibility and button visibility
+        -- Fade animation helper
+        local function fadeIn(obj, duration)
+            obj.Visible = true
+            obj.BackgroundTransparency = 1
+            local tween = game:GetService("TweenService"):Create(obj, TweenInfo.new(duration or 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundTransparency = 0.25
+            })
+            tween:Play()
+        end
+        
+        local function fadeOut(obj, duration, callback)
+            local tween = game:GetService("TweenService"):Create(obj, TweenInfo.new(duration or 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundTransparency = 1
+            })
+            tween:Play()
+            tween.Completed:Connect(function()
+                obj.Visible = false
+                obj.BackgroundTransparency = 0.25
+                if callback then callback() end
+            end)
+        end
+        
+        -- Store fade functions for frame
+        self._fadeIn = fadeIn
+        self._fadeOut = fadeOut
+        
+        -- Toggle frame visibility with fade and button visibility
         btn.MouseButton1Click:Connect(function()
-            self._frame.Visible = true
-            btn.Visible = false
+            fadeOut(btn, 0.15, function()
+                self._frame.BackgroundTransparency = 1
+                self._frame.Visible = true
+                local tween = game:GetService("TweenService"):Create(self._frame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    BackgroundTransparency = 0.25
+                })
+                tween:Play()
+            end)
         end)
         
-        -- Show button when frame is minimized
+        -- Show button when frame is minimized (with fade)
         self._frame:GetPropertyChangedSignal("Visible"):Connect(function()
-            btn.Visible = not self._frame.Visible
+            if not self._frame.Visible then
+                fadeIn(btn, 0.2)
+            end
         end)
         
         -- Draggable support (works on mobile too)
@@ -967,7 +1002,7 @@ do
         })
         titleBar.Parent = frame
 
-        -- Minimize button (hides frame, not gui)
+        -- Minimize button (hides frame with fade)
         local minimizeBtn = new("TextButton", {
             Size = UDim2.new(0, 26, 0, 26),
             Position = UDim2.new(1, -30, 0, 4),
@@ -975,7 +1010,7 @@ do
             Font = Enum.Font.GothamBold,
             TextSize = 20,
             TextColor3 = Color3.fromRGB(255, 255, 255),
-            Text = "-",
+            Text = "×",
             AutoButtonColor = false
         })
         minimizeBtn.Parent = frame
@@ -988,7 +1023,83 @@ do
             minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         end)
         minimizeBtn.MouseButton1Click:Connect(function()
-            frame.Visible = false
+            -- Fade out animation
+            local tween = game:GetService("TweenService"):Create(frame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundTransparency = 1
+            })
+            tween:Play()
+            tween.Completed:Connect(function()
+                frame.Visible = false
+                frame.BackgroundTransparency = 0.25
+            end)
+        end)
+
+        -- Resize handle (bottom-right corner)
+        local resizeHandle = new("TextButton", {
+            Size = UDim2.new(0, 16, 0, 16),
+            Position = UDim2.new(1, -16, 1, -16),
+            BackgroundTransparency = 1,
+            Text = "",
+            AutoButtonColor = false
+        })
+        resizeHandle.Parent = frame
+        
+        -- Draw resize indicator (diagonal lines)
+        local resizeLine1 = new("Frame", {
+            Size = UDim2.new(0, 10, 0, 1),
+            Position = UDim2.new(0, 4, 0, 10),
+            Rotation = 45,
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+            BackgroundTransparency = 0.5,
+            BorderSizePixel = 0
+        })
+        resizeLine1.Parent = resizeHandle
+        
+        local resizeLine2 = new("Frame", {
+            Size = UDim2.new(0, 6, 0, 1),
+            Position = UDim2.new(0, 8, 0, 10),
+            Rotation = 45,
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+            BackgroundTransparency = 0.5,
+            BorderSizePixel = 0
+        })
+        resizeLine2.Parent = resizeHandle
+        
+        -- Resize logic
+        local resizing = false
+        local resizeStart, startSize
+        local minWidth, minHeight = 350, 250
+        local maxWidth, maxHeight = 900, 700
+        
+        resizeHandle.InputBegan:Connect(function(io)
+            if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then
+                resizing = true
+                resizeStart = io.Position
+                startSize = frame.Size
+            end
+        end)
+        resizeHandle.InputEnded:Connect(function(io)
+            if io.UserInputType == Enum.UserInputType.MouseButton1 or io.UserInputType == Enum.UserInputType.Touch then
+                resizing = false
+            end
+        end)
+        UserInputService.InputChanged:Connect(function(io)
+            if resizing and (io.UserInputType == Enum.UserInputType.MouseMovement or io.UserInputType == Enum.UserInputType.Touch) then
+                local delta = io.Position - resizeStart
+                local newWidth = math.clamp(startSize.X.Offset + delta.X, minWidth, maxWidth)
+                local newHeight = math.clamp(startSize.Y.Offset + delta.Y, minHeight, maxHeight)
+                frame.Size = UDim2.new(0, newWidth, 0, newHeight)
+            end
+        end)
+        
+        -- Hover effect for resize handle
+        resizeHandle.MouseEnter:Connect(function()
+            resizeLine1.BackgroundTransparency = 0.2
+            resizeLine2.BackgroundTransparency = 0.2
+        end)
+        resizeHandle.MouseLeave:Connect(function()
+            resizeLine1.BackgroundTransparency = 0.5
+            resizeLine2.BackgroundTransparency = 0.5
         end)
 
         -- Tab list (left sidebar)
